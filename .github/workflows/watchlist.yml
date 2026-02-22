@@ -21,9 +21,9 @@ jobs:
       - run: pnpm run build
       - run: node dist/index.js
         env:
-          ESOVDB_API_BASE_URL: ${{ secrets.ESOVDB_API_BASE_URL }}
+          ESOVDB_API_BASE_URL: ${{ vars.ESOVDB_API_BASE_URL }}
           ESOVDB_KEY: ${{ secrets.ESOVDB_KEY }}
           AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
-          AIRTABLE_BASE_ID: ${{ secrets.AIRTABLE_BASE_ID }}
-          AIRTABLE_WATCHLIST_TABLE: ${{ secrets.AIRTABLE_WATCHLIST_TABLE }}
-          AIRTABLE_SUBMISSIONS_TABLE: ${{ secrets.AIRTABLE_SUBMISSIONS_TABLE }}
+          AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
+          AIRTABLE_WATCHLIST_TABLE: ${{ vars.AIRTABLE_WATCHLIST_TABLE }}
+          AIRTABLE_SUBMISSIONS_TABLE: ${{ vars.AIRTABLE_SUBMISSIONS_TABLE }}
