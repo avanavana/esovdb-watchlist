@@ -33,6 +33,7 @@ export async function fetchEsovdbVideos(args: {
   });
 
   if (res.status === 204) return [];
+  
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`ESOVDB API error ${res.status}: ${text}`);

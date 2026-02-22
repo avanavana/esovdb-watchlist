@@ -17,15 +17,18 @@ function pickPublishedAfter(fields: WatchlistFields): string | null {
 
 function toNullableNumber(value: number | string | undefined): number | null {
   if (typeof value === "number") return Number.isFinite(value) ? value : null;
+
   if (typeof value === "string" && value.trim() !== "") {
     const n = Number(value);
     return Number.isFinite(n) ? n : null;
   }
+
   return null;
 }
 
 function toSubmissionRecord(video: EsovdbVideo): AirtableCreateRecord<SubmissionFields> | null {
   if (!video || !video.id) return null;
+
   return {
     fields: {
       URL: `https://youtu.be/${video.id}`,
@@ -81,13 +84,15 @@ export async function runOnce(): Promise<void> {
         "Last Checked": startedAt,
         "Last Checked Notes": `Checked at ${startedAt}. No new videos.`,
       });
+
       console.log("[WATCHLIST] No videos returned.");
       return;
     }
 
     const mapped: AirtableCreateRecord<SubmissionFields>[] = [];
-    for (let i = 0; i < videos.length; i++) {
-      const rec = toSubmissionRecord(videos[i]);
+
+    for (const video of videos) {
+      const rec = toSubmissionRecord(video);
       if (rec) mapped.push(rec);
     }
 
@@ -101,6 +106,7 @@ export async function runOnce(): Promise<void> {
     console.log(`[WATCHLIST] Done. API returned ${videos.length}. Created ${createdCount}.`);
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
+
     try {
       await updateWatchlistRecord(record.id, {
         "Last Checked Notes": `ERROR at ${startedAt}: ${msg}`,
@@ -109,7 +115,6 @@ export async function runOnce(): Promise<void> {
       console.error("[WATCHLIST] Failed to write error note:", updateErr);
     }
     console.error("[WATCHLIST] Error:", err);
-    // Re-throw so GitHub Actions marks the run as failed
     throw err;
   }
 }
