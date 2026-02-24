@@ -4,6 +4,11 @@ on:
   schedule:
     - cron: '0 * * * *'
   workflow_dispatch:
+    inputs:
+      watchlistRecordId:
+        description: Airtable Watchlist record ID to process (optional)
+        required: false
+        type: string
 
 jobs:
   run:
@@ -27,3 +32,4 @@ jobs:
           AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
           AIRTABLE_WATCHLIST_TABLE: ${{ vars.AIRTABLE_WATCHLIST_TABLE }}
           AIRTABLE_SUBMISSIONS_TABLE: ${{ vars.AIRTABLE_SUBMISSIONS_TABLE }}
+          WATCHLIST_RECORD_ID: ${{ github.event.inputs.watchlistRecordId }}

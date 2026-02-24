@@ -42,6 +42,21 @@ export async function getNextWatchlistRecord(): Promise<AirtableRecord<Watchlist
   return data.records[0] || null;
 }
 
+export async function getWatchlistRecordById(
+  recordId: string
+): Promise<AirtableRecord<WatchlistFields> | null> {
+  if (!recordId) return null;
+  const table = encodeURIComponent(ENV.AIRTABLE_WATCHLIST_TABLE);
+
+  try {
+    return await airtableFetch<AirtableRecord<WatchlistFields>>(`/${table}/${encodeURIComponent(recordId)}`);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (msg.includes("Airtable error 404")) return null;
+    throw err;
+  }
+}
+
 export async function updateWatchlistRecord(
   recordId: string,
   fields: Partial<WatchlistFields>

@@ -1,4 +1,9 @@
-import { createSubmissions, getNextWatchlistRecord, updateWatchlistRecord } from "./airtable.js";
+import {
+  createSubmissions,
+  getNextWatchlistRecord,
+  getWatchlistRecordById,
+  updateWatchlistRecord,
+} from "./airtable.js";
 import { fetchEsovdbVideos } from "./esovdb.js";
 import type {
   AirtableCreateRecord,
@@ -47,11 +52,22 @@ function toSubmissionRecord(video: EsovdbVideo): AirtableCreateRecord<Submission
 }
 
 export async function runOnce(): Promise<void> {
-  const record = await getNextWatchlistRecord();
+  const requestedRecordId = process.env.WATCHLIST_RECORD_ID?.trim() || "";
+  const record = requestedRecordId
+    ? await getWatchlistRecordById(requestedRecordId)
+    : await getNextWatchlistRecord();
 
   if (!record) {
+    if (requestedRecordId) {
+      console.log(`[WATCHLIST] Requested record not found: ${requestedRecordId}`);
+      throw new Error(`Requested watchlist record not found: ${requestedRecordId}`);
+    }
     console.log("[WATCHLIST] No Active watchlist sources found.");
     return;
+  }
+
+  if (requestedRecordId) {
+    console.log(`[WATCHLIST] Targeted run for record=${requestedRecordId}`);
   }
 
   const fields = record.fields;
