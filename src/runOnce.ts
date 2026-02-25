@@ -4,7 +4,7 @@ import {
   getWatchlistRecordById,
   updateWatchlistRecord,
 } from "./airtable.js";
-import { fetchEsovdbVideos } from "./esovdb.js";
+import { fetchEsovdbVideos, notifyWatchlistSubmissionTotal } from "./esovdb.js";
 import type {
   AirtableCreateRecord,
   EsovdbVideo,
@@ -113,6 +113,37 @@ export async function runOnce(): Promise<void> {
     }
 
     const createdCount = await createSubmissions(mapped);
+
+    if (createdCount > 0) {
+      const firstVideo = videos[0];
+      const sampleVideo = videos[Math.floor(Math.random() * videos.length)];
+      const sampleVideoPayload = sampleVideo?.id
+        ? {
+            id: sampleVideo.id,
+            ...(sampleVideo.title ? { title: sampleVideo.title } : {}),
+            ...(sampleVideo.channel ? { channel: sampleVideo.channel } : {}),
+            ...(sampleVideo.channelId ? { channelId: sampleVideo.channelId } : {}),
+            ...(sampleVideo.date ? { date: sampleVideo.date } : {}),
+          }
+        : undefined;
+      try {
+        const sourceTitle = firstVideo?.channel || fields.Name || undefined;
+        const notifyPayload: Parameters<typeof notifyWatchlistSubmissionTotal>[0] = {
+          watchlistRecordId: record.id,
+          watchlistType: type,
+          createdSubmissions: createdCount,
+          apiReturnedVideos: videos.length,
+          sourceId: type === "Channel" ? (firstVideo?.channelId || id) : id,
+          checkedAtIso: startedAt,
+          ...(sourceTitle ? { sourceTitle } : {}),
+          ...(sampleVideoPayload ? { sampleVideo: sampleVideoPayload } : {}),
+        };
+        await notifyWatchlistSubmissionTotal(notifyPayload);
+        console.log(`[WATCHLIST] Sent Discord notification for ${createdCount} new submissions.`);
+      } catch (notifyErr: unknown) {
+        console.error("[WATCHLIST] Notification failed (continuing):", notifyErr);
+      }
+    }
 
     await updateWatchlistRecord(record.id, {
       "Last Checked": startedAt,
