@@ -5,51 +5,8 @@ import {
   updateWatchlistRecord,
 } from "./airtable.js";
 import { fetchEsovdbVideos, notifyWatchlistSubmissionTotal } from "./esovdb.js";
-import type {
-  AirtableCreateRecord,
-  EsovdbVideo,
-  SubmissionFields,
-  WatchlistFields,
-} from "./types.js";
-
-function isoNow(): string {
-  return new Date().toISOString();
-}
-
-function pickPublishedAfter(fields: WatchlistFields): string | null {
-  return fields["Last Checked"] || fields["Published After"] || null;
-}
-
-function toNullableNumber(value: number | string | undefined): number | null {
-  if (typeof value === "number") return Number.isFinite(value) ? value : null;
-
-  if (typeof value === "string" && value.trim() !== "") {
-    const n = Number(value);
-    return Number.isFinite(n) ? n : null;
-  }
-
-  return null;
-}
-
-function toSubmissionRecord(video: EsovdbVideo): AirtableCreateRecord<SubmissionFields> | null {
-  if (!video || !video.id) return null;
-
-  return {
-    fields: {
-      URL: `https://youtu.be/${video.id}`,
-      Title: video.title || "",
-      Description: video.description || "",
-      Year: toNullableNumber(video.year),
-      Date: video.date || null,
-      "Running Time": toNullableNumber(video.duration),
-      Medium: "Online Video",
-      "YouTube Channel Title": video.channel || "",
-      "YouTube Channel ID": video.channelId || "",
-      "Submission Source": "ESOVDB API Channel Watch",
-      "Submitted by": "ESOVDB API",
-    },
-  };
-}
+import type { AirtableCreateRecord, SubmissionFields } from "./types.js";
+import { countLabel, isoNow, pickPublishedAfter, toSubmissionRecord } from "./utils.js";
 
 export async function runOnce(): Promise<void> {
   const requestedRecordId = process.env.WATCHLIST_RECORD_ID?.trim() || "";
@@ -139,7 +96,9 @@ export async function runOnce(): Promise<void> {
           ...(sampleVideoPayload ? { sampleVideo: sampleVideoPayload } : {}),
         };
         await notifyWatchlistSubmissionTotal(notifyPayload);
-        console.log(`[WATCHLIST] Sent Discord notification for ${createdCount} new submissions.`);
+        console.log(
+          `[WATCHLIST] Sent Discord notification for ${countLabel(createdCount, "new submission")}.`
+        );
       } catch (notifyErr: unknown) {
         console.error("[WATCHLIST] Notification failed (continuing):", notifyErr);
       }
@@ -147,10 +106,12 @@ export async function runOnce(): Promise<void> {
 
     await updateWatchlistRecord(record.id, {
       "Last Checked": startedAt,
-      "Last Checked Notes": `Checked at ${startedAt}. API returned ${videos.length} videos. Created ${createdCount} submissions.`,
+      "Last Checked Notes": `Checked at ${startedAt}. API returned ${countLabel(videos.length, "video")}. Created ${countLabel(createdCount, "submission")}.`,
     });
 
-    console.log(`[WATCHLIST] Done. API returned ${videos.length}. Created ${createdCount}.`);
+    console.log(
+      `[WATCHLIST] Done. API returned ${countLabel(videos.length, "video")}. Created ${countLabel(createdCount, "submission")}.`
+    );
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
 
