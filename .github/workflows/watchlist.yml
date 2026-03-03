@@ -2,7 +2,7 @@ name: ESOVDB Watchlist Runner
 
 on:
   schedule:
-    - cron: '17 * * * *'
+    - cron: '41 * * * *'
   workflow_dispatch:
     inputs:
       watchlistRecordId:
