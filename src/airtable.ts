@@ -6,26 +6,55 @@ import type {
   WatchlistFields,
 } from "./types.js";
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function airtableUrl(path: string): string {
   const u = new URL(`https://api.airtable.com/v0/${ENV.AIRTABLE_BASE_ID}${path}`);
   return u.toString();
 }
 
 async function airtableFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(airtableUrl(path), {
-    ...init,
-    headers: {
-      Authorization: `Bearer ${ENV.AIRTABLE_TOKEN}`,
-      "Content-Type": "application/json",
-      ...(init?.headers || {}),
-    },
-  });
+  let lastError: unknown = null;
 
-  if (!res.ok) {
+  for (let attempt = 1; attempt <= 4; attempt += 1) {
+    let res: Response;
+
+    try {
+      res = await fetch(airtableUrl(path), {
+        ...init,
+        headers: {
+          Authorization: `Bearer ${ENV.AIRTABLE_TOKEN}`,
+          "Content-Type": "application/json",
+          ...(init?.headers || {}),
+        },
+      });
+    } catch (err) {
+      lastError = err;
+      if (attempt === 4) break;
+      await sleep(1000 * attempt);
+      continue;
+    }
+
+    if (res.ok) {
+      return (await res.json()) as T;
+    }
+
     const text = await res.text().catch(() => "");
-    throw new Error(`Airtable error ${res.status}: ${text}`);
+    const retryAfter = Number(res.headers.get("retry-after") || "");
+    const shouldRetry = res.status === 408 || res.status === 429 || res.status >= 500;
+    lastError = new Error(`Airtable error ${res.status}: ${text}`);
+
+    if (!shouldRetry || attempt === 4) {
+      throw lastError;
+    }
+
+    await sleep(Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter * 1000 : 1000 * attempt);
   }
-  return (await res.json()) as T;
+
+  if (lastError instanceof Error) throw lastError;
+  throw new Error("Airtable request failed.");
 }
 
 export async function getNextWatchlistRecord(): Promise<AirtableRecord<WatchlistFields> | null> {
