@@ -1,6 +1,10 @@
 import { ENV } from "./env.js";
 import type { DurationFilter, EsovdbVideo, WatchlistType } from "./types.js";
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export async function fetchEsovdbVideos(args: {
   type: WatchlistType;
   id: string;
@@ -23,25 +27,35 @@ export async function fetchEsovdbVideos(args: {
           playlist: args.id,
         };
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "x-esovdb-key": ENV.ESOVDB_KEY,
-    },
-    body: JSON.stringify(body),
-  });
+  let lastErrorText = "";
 
-  if (res.status === 204) return [];
-  
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`ESOVDB API error ${res.status}: ${text}`);
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-esovdb-key": ENV.ESOVDB_KEY,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (res.status === 204) return [];
+
+    if (res.ok) {
+      const data = (await res.json()) as unknown;
+      if (!Array.isArray(data)) return [];
+      return data as EsovdbVideo[];
+    }
+
+    lastErrorText = await res.text().catch(() => "");
+    if (res.status < 500 || attempt === 3) {
+      throw new Error(`ESOVDB API error ${res.status}: ${lastErrorText}`);
+    }
+
+    await sleep(1000 * attempt);
   }
 
-  const data = (await res.json()) as unknown;
-  if (!Array.isArray(data)) return [];
-  return data as EsovdbVideo[];
+  throw new Error(`ESOVDB API error after retries: ${lastErrorText}`);
 }
 
 export async function notifyWatchlistSubmissionTotal(args: {
