@@ -24,13 +24,6 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
-      - run: |
-          echo "ESOVDB_API_BASE_URL=$ESOVDB_API_BASE_URL"
-          node -e "const u=new URL(process.env.ESOVDB_API_BASE_URL); console.log('ESOVDB host=' + u.host)"
-          nslookup api.esovdb.org || true
-          curl -i https://api.esovdb.org/health || true
-        env:
-          ESOVDB_API_BASE_URL: ${{ vars.ESOVDB_API_BASE_URL }}
       - run: node dist/index.js
         env:
           ESOVDB_API_BASE_URL: ${{ vars.ESOVDB_API_BASE_URL }}
