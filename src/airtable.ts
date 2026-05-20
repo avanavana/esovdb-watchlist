@@ -6,6 +6,10 @@ import type {
   WatchlistFields,
 } from "./types.js";
 
+interface AirtableRecordReference {
+  id: string;
+}
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -98,23 +102,29 @@ export async function updateWatchlistRecord(
   });
 }
 
-export async function createSubmissions(records: AirtableCreateRecord<SubmissionFields>[]): Promise<number> {
-  if (records.length === 0) return 0;
+export async function createSubmissions(
+  records: AirtableCreateRecord<SubmissionFields>[]
+): Promise<string[]> {
+  if (records.length === 0) return [];
   const table = encodeURIComponent(ENV.AIRTABLE_SUBMISSIONS_TABLE);
 
-  let created = 0;
+  const createdRecordIds: string[] = [];
   const pending = records.slice();
 
   while (pending.length) {
     const batch = pending.splice(0, 10);
-    
-    const createdBatch = await airtableFetch<{ records: unknown[] }>(`/${table}`, {
+
+    const createdBatch = await airtableFetch<{ records: AirtableRecordReference[] }>(`/${table}`, {
       method: "POST",
       body: JSON.stringify({ records: batch }),
     });
-    
-    created += Array.isArray(createdBatch.records) ? createdBatch.records.length : batch.length;
+
+    if (Array.isArray(createdBatch.records)) {
+      for (const record of createdBatch.records) {
+        if (record?.id) createdRecordIds.push(record.id);
+      }
+    }
   }
 
-  return created;
+  return createdRecordIds;
 }

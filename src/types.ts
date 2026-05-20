@@ -8,6 +8,7 @@ export interface WatchlistFields {
   Type?: WatchlistType;
   ID?: string;
   URL?: string;
+  Submissions?: string[];
   Duration?: DurationFilter;
   "Published After"?: string; // ISO datetime string
   "Last Checked"?: string; // ISO datetime string

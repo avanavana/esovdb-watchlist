@@ -69,7 +69,17 @@ export async function runOnce(): Promise<void> {
       if (rec) mapped.push(rec);
     }
 
-    const createdCount = await createSubmissions(mapped);
+    const createdSubmissionIds = await createSubmissions(mapped);
+    const createdCount = createdSubmissionIds.length;
+
+    if (createdSubmissionIds.length > 0) {
+      const existingSubmissionIds = Array.isArray(fields.Submissions) ? fields.Submissions : [];
+      const linkedSubmissionIds = [ ...new Set([ ...existingSubmissionIds, ...createdSubmissionIds ]) ];
+
+      await updateWatchlistRecord(record.id, {
+        Submissions: linkedSubmissionIds,
+      });
+    }
 
     if (createdCount > 0) {
       const firstVideo = videos[0];
