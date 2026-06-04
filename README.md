@@ -10,6 +10,8 @@ Standalone TypeScript runner for ESOVDB YouTube watchlist ingestion via GitHub A
 - Appends created submission record links onto the watchlist row's `Submissions` field
 - Updates `Last Checked` and `Last Checked Notes`
 - Fails visibly in GitHub Actions on API/Airtable errors (while still writing an error note when possible)
+- Retries transient Airtable failures, including intermittent `406 blocked` responses on non-`POST` requests
+- Includes Airtable request method/path/body details in thrown errors to make GitHub Actions failures actionable
 
 ## Runtime Rules
 
