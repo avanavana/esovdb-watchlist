@@ -33,6 +33,20 @@ function getGitHubWorkflowRunUrl(): string {
   return `${serverUrl}/${repository}/actions/runs/${runId}`;
 }
 
+function getSmartFilterSourcePrompt(fields: {
+  "Smart Filter Source Prompt"?: string;
+  "Smart Filter Notes"?: string;
+}): string {
+  return fields["Smart Filter Source Prompt"] || fields["Smart Filter Notes"] || "";
+}
+
+function getSmartFilterSystemPrompt(fields: {
+  "Smart Filter System Prompt"?: string;
+  "Smart Filter Prompt"?: string;
+}): string {
+  return fields["Smart Filter System Prompt"] || fields["Smart Filter Prompt"] || "";
+}
+
 async function updateRunAndWatchlistStatus(args: {
   recordId: string;
   runRecordId: string;
@@ -148,7 +162,8 @@ export async function runOnce(): Promise<void> {
           sourceId: id,
           sourceName: fields.Name || "",
           sourceType: type,
-          notes: fields["Smart Filter Notes"] || "",
+          sourcePrompt: getSmartFilterSourcePrompt(fields),
+          systemPrompt: getSmartFilterSystemPrompt(fields),
           mode: getSmartFilterMode(fields),
           thresholds: getSmartFilterThresholds(fields),
         },

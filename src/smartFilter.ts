@@ -49,7 +49,8 @@ export interface SmartFilterSourceContext {
   sourceId: string;
   sourceName: string;
   sourceType: WatchlistType;
-  notes: string;
+  sourcePrompt: string;
+  systemPrompt: string;
   mode: SmartFilterMode;
   thresholds: SmartFilterThresholds;
 }
@@ -183,7 +184,7 @@ function buildMetadataBlock(video: EsovdbVideo, source: SmartFilterSourceContext
     video_description: truncate(video.description || '', 4000),
     channel_or_source_name: video.channel || source.sourceName,
     source_type: source.sourceType,
-    watchlist_source_notes: source.notes,
+    watchlist_source_prompt: source.sourcePrompt,
     date: video.date || '',
     running_time_seconds: toNullableNumber(video.duration)
   };
@@ -199,7 +200,13 @@ function buildMessages(
   return [
     {
       role: 'system',
-      content: `${config.systemPrompt}\n\nClassification policy:\n${config.classificationPolicy}`
+      content: [
+        config.systemPrompt,
+        source.systemPrompt ? `Watchlist source system prompt:\n${source.systemPrompt}` : '',
+        `Classification policy:\n${config.classificationPolicy}`
+      ]
+        .filter(Boolean)
+        .join('\n\n')
     },
     {
       role: 'user',

@@ -22,7 +22,10 @@ export interface WatchlistFields {
   "Last Checked"?: string; // ISO datetime string
   "Last Checked Notes"?: string;
   "Smart Filtering"?: boolean;
+  "Smart Filter Source Prompt"?: string;
+  "Smart Filter System Prompt"?: string;
   "Smart Filter Notes"?: string;
+  "Smart Filter Prompt"?: string;
   "Smart Filter Mode"?: SmartFilterMode;
   "Smart Filter Exclude Threshold"?: number;
   "Smart Filter Auto-Include Threshold"?: number;
