@@ -9,6 +9,7 @@ import {
 import { fetchEsovdbVideos, notifyWatchlistSubmissionTotal } from "./esovdb.js";
 import {
   getSmartFilterMode,
+  getSmartFilterSourcePrompt,
   getSmartFilterThresholds,
   isSmartFilteringEnabled,
 } from "./smartFilter.js";
@@ -31,13 +32,6 @@ function getGitHubWorkflowRunUrl(): string {
 
   if (!serverUrl || !repository || !runId) return "";
   return `${serverUrl}/${repository}/actions/runs/${runId}`;
-}
-
-function getSmartFilterSourcePrompt(fields: {
-  "Smart Filter Source Prompt"?: string;
-  "Smart Filter Notes"?: string;
-}): string {
-  return fields["Smart Filter Source Prompt"] || fields["Smart Filter Notes"] || "";
 }
 
 async function updateRunAndWatchlistStatus(args: {

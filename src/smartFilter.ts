@@ -144,6 +144,10 @@ export function getSmartFilterMode(fields: WatchlistFields): SmartFilterMode {
   return fields['Smart Filter Mode'] || DEFAULT_MODE;
 }
 
+export function getSmartFilterSourcePrompt(fields: WatchlistFields): string {
+  return fields['Smart Filter Source Prompt'] || fields['Smart Filter Notes'] || '';
+}
+
 export function isSmartFilteringEnabled(fields: WatchlistFields): boolean {
   return fields['Smart Filtering'] === true;
 }

@@ -9,6 +9,23 @@ on:
         description: Airtable Watchlist record ID to process (optional)
         required: false
         type: string
+      smartFilterDryRun:
+        description: Run smart filtering only and print results without writing Airtable records
+        required: false
+        type: boolean
+        default: false
+      smartFilterExcludeThreshold:
+        description: Optional dry-run exclude threshold override, 0.0 to 1.0
+        required: false
+        type: string
+      smartFilterAutoIncludeThreshold:
+        description: Optional dry-run auto-include threshold override, 0.0 to 1.0
+        required: false
+        type: string
+      smartFilterSourcePrompt:
+        description: Optional dry-run source prompt override
+        required: false
+        type: string
 
 jobs:
   run:
@@ -24,7 +41,9 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm run build
-      - run: node dist/index.js
+      - name: Run watchlist
+        if: ${{ github.event_name != 'workflow_dispatch' || !inputs.smartFilterDryRun }}
+        run: node dist/index.js
         env:
           ESOVDB_API_BASE_URL: ${{ vars.ESOVDB_API_BASE_URL }}
           ESOVDB_KEY: ${{ secrets.ESOVDB_KEY }}
@@ -39,4 +58,25 @@ jobs:
           SMART_FILTER_MODEL: ${{ vars.SMART_FILTER_MODEL }}
           SMART_FILTER_CONFIG_PATH: ${{ vars.SMART_FILTER_CONFIG_PATH }}
           WATCHLIST_RECORD_ID: ${{ github.event.inputs.watchlistRecordId }}
+          WATCHLIST_DISCORD_NOTIFY_PATH: ${{ vars.WATCHLIST_DISCORD_NOTIFY_PATH }}
+      - name: Dry run smart filter
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.smartFilterDryRun }}
+        run: pnpm run smart-filter:dry-run
+        env:
+          ESOVDB_API_BASE_URL: ${{ vars.ESOVDB_API_BASE_URL }}
+          ESOVDB_KEY: ${{ secrets.ESOVDB_KEY }}
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+          AIRTABLE_BASE_ID: ${{ vars.AIRTABLE_BASE_ID }}
+          AIRTABLE_ADMIN_BASE_ID: ${{ vars.AIRTABLE_ADMIN_BASE_ID }}
+          AIRTABLE_WATCHLIST_TABLE: ${{ vars.AIRTABLE_WATCHLIST_TABLE }}
+          AIRTABLE_SUBMISSIONS_TABLE: ${{ vars.AIRTABLE_SUBMISSIONS_TABLE }}
+          AIRTABLE_WATCHLIST_RUNS_TABLE: ${{ vars.AIRTABLE_WATCHLIST_RUNS_TABLE }}
+          AIRTABLE_WATCHLIST_CANDIDATES_TABLE: ${{ vars.AIRTABLE_WATCHLIST_CANDIDATES_TABLE }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          SMART_FILTER_MODEL: ${{ vars.SMART_FILTER_MODEL }}
+          SMART_FILTER_CONFIG_PATH: ${{ vars.SMART_FILTER_CONFIG_PATH }}
+          WATCHLIST_RECORD_ID: ${{ github.event.inputs.watchlistRecordId }}
+          SMART_FILTER_DRY_RUN_EXCLUDE_THRESHOLD: ${{ github.event.inputs.smartFilterExcludeThreshold }}
+          SMART_FILTER_DRY_RUN_AUTO_INCLUDE_THRESHOLD: ${{ github.event.inputs.smartFilterAutoIncludeThreshold }}
+          SMART_FILTER_DRY_RUN_SOURCE_PROMPT: ${{ github.event.inputs.smartFilterSourcePrompt }}
           WATCHLIST_DISCORD_NOTIFY_PATH: ${{ vars.WATCHLIST_DISCORD_NOTIFY_PATH }}

@@ -52,6 +52,22 @@ When enabled, the runner:
 
 The per-source Airtable prompt field is `Smart Filter Source Prompt`; it is appended to the classifier user message with the video metadata. The single system prompt lives in `smart-filter.config.json`.
 
+## Smart Filter Dry Run
+
+Manual GitHub Actions runs can enable `smartFilterDryRun` to classify candidate videos without creating or updating Airtable records. The Actions log prints every candidate video with its result, score, reason, dominant topics, and a summary.
+
+Optional manual-run inputs can override dry-run thresholds and source prompt:
+
+- `smartFilterExcludeThreshold`
+- `smartFilterAutoIncludeThreshold`
+- `smartFilterSourcePrompt`
+
+The same dry run can be run locally after building:
+
+```bash
+WATCHLIST_RECORD_ID="rec..." pnpm run smart-filter:dry-run
+```
+
 ## Local Run
 
 ```bash
