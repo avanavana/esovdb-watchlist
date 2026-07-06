@@ -30,7 +30,8 @@ export function toNullableNumber(value: number | string | undefined): number | n
 }
 
 export function toSubmissionRecord(
-  video: EsovdbVideo
+  video: EsovdbVideo,
+  extraFields: Partial<SubmissionFields> = {}
 ): AirtableCreateRecord<SubmissionFields> | null {
   if (!video || !video.id) return null;
 
@@ -47,6 +48,7 @@ export function toSubmissionRecord(
       "YouTube Channel ID": video.channelId || "",
       "Submission Source": "ESOVDB API Channel Watch",
       "Submitted by": "ESOVDB API",
+      ...extraFields,
     },
   };
 }

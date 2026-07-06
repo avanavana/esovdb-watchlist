@@ -7,6 +7,7 @@ Standalone TypeScript runner for ESOVDB YouTube watchlist ingestion via GitHub A
 - Selects the oldest `Active` watchlist row in Airtable (`Last Checked` ascending, blanks first)
 - Calls the ESOVDB API YouTube ingestion endpoints (channel or playlist)
 - Creates Airtable `Submissions` records in batches of 10
+- Optionally classifies candidates with metadata-only smart filtering before creating submissions
 - Appends created submission record links onto the watchlist row's `Submissions` field
 - Updates `Last Checked` and `Last Checked Notes`
 - Fails visibly in GitHub Actions on API/Airtable errors (while still writing an error note when possible)
@@ -25,11 +26,29 @@ Standalone TypeScript runner for ESOVDB YouTube watchlist ingestion via GitHub A
 - `ESOVDB_KEY`
 - `AIRTABLE_TOKEN`
 - `AIRTABLE_BASE_ID`
+- `OPENAI_API_KEY` (required only for Watchlist sources with `Smart Filtering` enabled)
 
 Optional secrets (defaults shown):
 
 - `AIRTABLE_WATCHLIST_TABLE` (defaults to `Watchlist`)
 - `AIRTABLE_SUBMISSIONS_TABLE` (defaults to `Submissions`)
+- `AIRTABLE_ADMIN_BASE_ID` (defaults to `appiY4BA1rAyc3nT9`)
+- `AIRTABLE_WATCHLIST_RUNS_TABLE` (defaults to `Watchlist Runs`)
+- `AIRTABLE_WATCHLIST_CANDIDATES_TABLE` (defaults to `Watchlist Submission Candidates`)
+- `SMART_FILTER_MODEL` (defaults to `smart-filter.config.json` `defaultModel`)
+- `SMART_FILTER_CONFIG_PATH` (defaults to `smart-filter.config.json`)
+
+## Smart Filtering
+
+Smart filtering is opt-in per Watchlist source. When `Smart Filtering` is false or missing, the runner uses the existing submission flow.
+
+When enabled, the runner:
+
+- Creates a `Watchlist Runs` record in the Admin base
+- Classifies each candidate video with the metadata-only prompt in `smart-filter.config.json`
+- Creates `Watchlist Submission Candidates` records for every classified candidate
+- Creates Submissions only for `Include` and `Needs Review`
+- Sets `Smart Filter Needs Review` on the Submission when the classifier result is `Needs Review`
 
 ## Local Run
 

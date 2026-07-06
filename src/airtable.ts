@@ -4,6 +4,8 @@ import type {
   AirtableRecord,
   SubmissionFields,
   WatchlistFields,
+  WatchlistRunFields,
+  WatchlistSubmissionCandidateFields,
 } from './types.js';
 
 interface AirtableRecordReference {
@@ -66,12 +68,12 @@ function getResponseHeaderSummary(res: Response): string {
   return values.join(', ');
 }
 
-function airtableUrl(path: string): string {
-  const u = new URL(`https://api.airtable.com/v0/${ENV.AIRTABLE_BASE_ID}${path}`);
+function airtableUrl(baseId: string, path: string): string {
+  const u = new URL(`https://api.airtable.com/v0/${baseId}${path}`);
   return u.toString();
 }
 
-async function airtableFetch<T>(path: string, init?: RequestInit): Promise<T> {
+async function airtableFetch<T>(baseId: string, path: string, init?: RequestInit): Promise<T> {
   const method = getRequestMethod(init);
   const requestBodyPreview = getRequestBodyPreview(init?.body);
   let lastError: unknown = null;
@@ -88,7 +90,7 @@ async function airtableFetch<T>(path: string, init?: RequestInit): Promise<T> {
         ...(init?.headers || {}),
       };
 
-      res = await fetch(airtableUrl(path), {
+      res = await fetch(airtableUrl(baseId, path), {
         ...init,
         headers,
       });
@@ -139,7 +141,10 @@ export async function getNextWatchlistRecord(): Promise<AirtableRecord<Watchlist
   params.set('sort[0][direction]', 'asc');
   const url = `/${table}?${params.toString()}`;
 
-  const data = await airtableFetch<{ records: AirtableRecord<WatchlistFields>[] }>(url);
+  const data = await airtableFetch<{ records: AirtableRecord<WatchlistFields>[] }>(
+    ENV.AIRTABLE_BASE_ID,
+    url
+  );
   return data.records[0] || null;
 }
 
@@ -150,7 +155,10 @@ export async function getWatchlistRecordById(
   const table = encodeURIComponent(ENV.AIRTABLE_WATCHLIST_TABLE);
 
   try {
-    return await airtableFetch<AirtableRecord<WatchlistFields>>(`/${table}/${encodeURIComponent(recordId)}`);
+    return await airtableFetch<AirtableRecord<WatchlistFields>>(
+      ENV.AIRTABLE_BASE_ID,
+      `/${table}/${encodeURIComponent(recordId)}`
+    );
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     if (msg.includes('status 404')) return null;
@@ -164,7 +172,7 @@ export async function updateWatchlistRecord(
 ): Promise<void> {
   const table = encodeURIComponent(ENV.AIRTABLE_WATCHLIST_TABLE);
 
-  await airtableFetch(`/${table}/${encodeURIComponent(recordId)}`, {
+  await airtableFetch(ENV.AIRTABLE_BASE_ID, `/${table}/${encodeURIComponent(recordId)}`, {
     method: 'PATCH',
     body: JSON.stringify({ fields }),
   });
@@ -182,10 +190,14 @@ export async function createSubmissions(
   while (pending.length) {
     const batch = pending.splice(0, 10);
 
-    const createdBatch = await airtableFetch<{ records: AirtableRecordReference[] }>(`/${table}`, {
-      method: 'POST',
-      body: JSON.stringify({ records: batch }),
-    });
+    const createdBatch = await airtableFetch<{ records: AirtableRecordReference[] }>(
+      ENV.AIRTABLE_BASE_ID,
+      `/${table}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ records: batch }),
+      }
+    );
 
     if (Array.isArray(createdBatch.records)) {
       for (const record of createdBatch.records) {
@@ -195,4 +207,54 @@ export async function createSubmissions(
   }
 
   return createdRecordIds;
+}
+
+export async function createWatchlistRun(
+  fields: WatchlistRunFields
+): Promise<AirtableRecord<WatchlistRunFields>> {
+  const table = encodeURIComponent(ENV.AIRTABLE_WATCHLIST_RUNS_TABLE);
+
+  return airtableFetch<AirtableRecord<WatchlistRunFields>>(ENV.AIRTABLE_ADMIN_BASE_ID, `/${table}`, {
+    method: 'POST',
+    body: JSON.stringify({ fields }),
+  });
+}
+
+export async function updateWatchlistRun(
+  recordId: string,
+  fields: Partial<WatchlistRunFields>
+): Promise<void> {
+  const table = encodeURIComponent(ENV.AIRTABLE_WATCHLIST_RUNS_TABLE);
+
+  await airtableFetch(ENV.AIRTABLE_ADMIN_BASE_ID, `/${table}/${encodeURIComponent(recordId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ fields }),
+  });
+}
+
+export async function createWatchlistSubmissionCandidate(
+  fields: WatchlistSubmissionCandidateFields
+): Promise<AirtableRecord<WatchlistSubmissionCandidateFields>> {
+  const table = encodeURIComponent(ENV.AIRTABLE_WATCHLIST_CANDIDATES_TABLE);
+
+  return airtableFetch<AirtableRecord<WatchlistSubmissionCandidateFields>>(
+    ENV.AIRTABLE_ADMIN_BASE_ID,
+    `/${table}`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ fields }),
+    }
+  );
+}
+
+export async function updateWatchlistSubmissionCandidate(
+  recordId: string,
+  fields: Partial<WatchlistSubmissionCandidateFields>
+): Promise<void> {
+  const table = encodeURIComponent(ENV.AIRTABLE_WATCHLIST_CANDIDATES_TABLE);
+
+  await airtableFetch(ENV.AIRTABLE_ADMIN_BASE_ID, `/${table}/${encodeURIComponent(recordId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ fields }),
+  });
 }

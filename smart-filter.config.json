@@ -1,0 +1,14 @@
+{
+  "promptVersion": "metadata-v1",
+  "defaultModel": "gpt-4o-mini",
+  "models": [
+    {
+      "id": "gpt-4o-mini",
+      "provider": "openai",
+      "description": "Low-cost default for short metadata classification with strict JSON schema output."
+    }
+  ],
+  "systemPrompt": "You classify candidate YouTube videos for the Earth Science Online Video Database (ESOVDB). Return JSON only. Use only the provided metadata. Do not infer from unavailable transcripts.",
+  "classificationPolicy": "Include videos primarily about geology, earth science, earth systems science, geophysics, geochemistry, paleontology, mineralogy, petrology, sedimentology, stratigraphy, tectonics, volcanology, geomorphology, paleoclimate, hydrogeology, geological field trips, geology lectures, geology documentaries, and earth science podcasts, interviews, seminars, or educational videos. Exclude videos primarily about professional development, geology careers, diversity/equity/inclusion discussions about the profession, departmental announcements, admissions or recruiting, university promotional content, conference logistics, general travel without substantial geology, history without substantial geology, geography without substantial geology, and generic science education where Earth science is not central. If mixed, score high only when Earth science is a major or dominant subject.",
+  "userPrompt": "Assign a relevance_score from 0.0 to 1.0 for whether this YouTube video belongs in ESOVDB. Base the score on the classification policy and metadata. Return a concise reason and dominant_topics."
+}
