@@ -22,6 +22,10 @@ on:
         description: Optional dry-run auto-include threshold override, 0.0 to 1.0
         required: false
         type: string
+      smartFilterCandidateLimit:
+        description: Optional dry-run limit for number of candidate videos to classify
+        required: false
+        type: string
       smartFilterSourcePrompt:
         description: Optional dry-run source prompt override
         required: false
@@ -78,5 +82,6 @@ jobs:
           WATCHLIST_RECORD_ID: ${{ github.event.inputs.watchlistRecordId }}
           SMART_FILTER_DRY_RUN_EXCLUDE_THRESHOLD: ${{ github.event.inputs.smartFilterExcludeThreshold }}
           SMART_FILTER_DRY_RUN_AUTO_INCLUDE_THRESHOLD: ${{ github.event.inputs.smartFilterAutoIncludeThreshold }}
+          SMART_FILTER_DRY_RUN_CANDIDATE_LIMIT: ${{ github.event.inputs.smartFilterCandidateLimit }}
           SMART_FILTER_DRY_RUN_SOURCE_PROMPT: ${{ github.event.inputs.smartFilterSourcePrompt }}
           WATCHLIST_DISCORD_NOTIFY_PATH: ${{ vars.WATCHLIST_DISCORD_NOTIFY_PATH }}

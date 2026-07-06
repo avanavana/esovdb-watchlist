@@ -60,6 +60,7 @@ Optional manual-run inputs can override dry-run thresholds and source prompt:
 
 - `smartFilterExcludeThreshold`
 - `smartFilterAutoIncludeThreshold`
+- `smartFilterCandidateLimit`
 - `smartFilterSourcePrompt`
 
 The same dry run can be run locally after building:

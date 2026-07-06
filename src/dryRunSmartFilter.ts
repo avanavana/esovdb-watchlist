@@ -32,6 +32,18 @@ function parseOptionalThreshold(name: string): number | null {
   return value;
 }
 
+function getDryRunCandidateLimit(): number | null {
+  const raw = process.env.SMART_FILTER_DRY_RUN_CANDIDATE_LIMIT?.trim();
+  if (!raw) return null;
+
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1) {
+    throw new Error('SMART_FILTER_DRY_RUN_CANDIDATE_LIMIT must be a positive integer.');
+  }
+
+  return value;
+}
+
 function getDryRunThresholds(fields: WatchlistFields): SmartFilterThresholds {
   const thresholds = getSmartFilterThresholds(fields);
   const excludeOverride = parseOptionalThreshold('SMART_FILTER_DRY_RUN_EXCLUDE_THRESHOLD');
@@ -130,6 +142,7 @@ export async function dryRunSmartFilter(): Promise<void> {
   const publishedAfter = pickPublishedAfter(fields);
   const thresholds = getDryRunThresholds(fields);
   const sourcePrompt = getDryRunSourcePrompt(fields);
+  const candidateLimit = getDryRunCandidateLimit();
 
   console.log(`[SMART FILTER DRY RUN] Source: ${fields.Name || id} (${type} ${id})`);
   console.log(`[SMART FILTER DRY RUN] Record: ${record.id}`);
@@ -138,6 +151,9 @@ export async function dryRunSmartFilter(): Promise<void> {
   );
   console.log(
     `[SMART FILTER DRY RUN] Thresholds: exclude=${thresholds.exclude}, autoInclude=${thresholds.autoInclude}`
+  );
+  console.log(
+    `[SMART FILTER DRY RUN] Candidate limit: ${candidateLimit === null ? 'none' : candidateLimit}`
   );
   console.log('[SMART FILTER DRY RUN] No Airtable records will be created or updated.');
 
@@ -152,10 +168,15 @@ export async function dryRunSmartFilter(): Promise<void> {
 
   if (!videos.length) return;
 
+  const videosToClassify = candidateLimit === null ? videos : videos.slice(0, candidateLimit);
+  console.log(
+    `[SMART FILTER DRY RUN] Classifying ${countLabel(videosToClassify.length, 'candidate video')}.`
+  );
+
   const config = await loadSmartFilterConfig();
   const results: DryRunResult[] = [];
 
-  for (const video of videos) {
+  for (const video of videosToClassify) {
     try {
       const classification = await classifyVideoMetadata(
         video,
