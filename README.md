@@ -50,7 +50,7 @@ When enabled, the runner:
 - Creates Submissions only for `Include` and `Needs Review`
 - Sets `Smart Filter Needs Review` on the Submission when the classifier result is `Needs Review`
 
-Per-source Airtable prompt fields are `Smart Filter Source Prompt` and `Smart Filter System Prompt`.
+The per-source Airtable prompt field is `Smart Filter Source Prompt`; the system prompt lives in `smart-filter.config.json`.
 
 ## Local Run
 

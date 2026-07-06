@@ -50,7 +50,6 @@ export interface SmartFilterSourceContext {
   sourceName: string;
   sourceType: WatchlistType;
   sourcePrompt: string;
-  systemPrompt: string;
   mode: SmartFilterMode;
   thresholds: SmartFilterThresholds;
 }
@@ -200,13 +199,7 @@ function buildMessages(
   return [
     {
       role: 'system',
-      content: [
-        config.systemPrompt,
-        source.systemPrompt ? `Watchlist source system prompt:\n${source.systemPrompt}` : '',
-        `Classification policy:\n${config.classificationPolicy}`
-      ]
-        .filter(Boolean)
-        .join('\n\n')
+      content: `${config.systemPrompt}\n\nClassification policy:\n${config.classificationPolicy}`
     },
     {
       role: 'user',
