@@ -26,8 +26,6 @@ interface SmartFilterConfig {
   defaultModel: string;
   models: SmartFilterModelConfig[];
   systemPrompt: string;
-  classificationPolicy: string;
-  userPrompt: string;
 }
 
 export interface SmartFilterThresholds {
@@ -62,24 +60,6 @@ interface OpenAiChatCompletionResponse {
   }[];
 }
 
-const fallbackConfig: SmartFilterConfig = {
-  promptVersion: 'metadata-v1',
-  defaultModel: 'gpt-4o-mini',
-  models: [
-    {
-      id: 'gpt-4o-mini',
-      provider: 'openai',
-      description: 'Low-cost default for short metadata classification with strict JSON schema output.'
-    }
-  ],
-  systemPrompt:
-    'You classify candidate YouTube videos for the Earth Science Online Video Database (ESOVDB). Return JSON only. Use only the provided metadata. Do not infer from unavailable transcripts.',
-  classificationPolicy:
-    'Include videos primarily about geology, earth science, earth systems science, geophysics, geochemistry, paleontology, mineralogy, petrology, sedimentology, stratigraphy, tectonics, volcanology, geomorphology, paleoclimate, hydrogeology, geological field trips, geology lectures, geology documentaries, and earth science podcasts, interviews, seminars, or educational videos. Exclude videos primarily about professional development, geology careers, diversity/equity/inclusion discussions about the profession, departmental announcements, admissions or recruiting, university promotional content, conference logistics, general travel without substantial geology, history without substantial geology, geography without substantial geology, and generic science education where Earth science is not central. If mixed, score high only when Earth science is a major or dominant subject.',
-  userPrompt:
-    'Assign a relevance_score from 0.0 to 1.0 for whether this YouTube video belongs in ESOVDB. Base the score on the classification policy and metadata. Return a concise reason and dominant_topics.'
-};
-
 function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
@@ -98,7 +78,7 @@ function normalizeNumber(value: unknown, fallback: number): number {
 }
 
 function validateConfig(value: unknown): SmartFilterConfig {
-  if (!isObject(value)) return fallbackConfig;
+  if (!isObject(value)) throw new Error('Smart filter config must be a JSON object.');
 
   const models = Array.isArray(value.models)
     ? value.models
@@ -114,21 +94,22 @@ function validateConfig(value: unknown): SmartFilterConfig {
           return normalizedModel;
         })
         .filter((model) => model.id)
-    : fallbackConfig.models;
+    : [];
+
+  const promptVersion = typeof value.promptVersion === 'string' ? value.promptVersion.trim() : '';
+  const defaultModel = typeof value.defaultModel === 'string' ? value.defaultModel.trim() : '';
+  const systemPrompt = typeof value.systemPrompt === 'string' ? value.systemPrompt.trim() : '';
+
+  if (!promptVersion) throw new Error('Smart filter config missing promptVersion.');
+  if (!defaultModel) throw new Error('Smart filter config missing defaultModel.');
+  if (!models.length) throw new Error('Smart filter config missing models.');
+  if (!systemPrompt) throw new Error('Smart filter config missing systemPrompt.');
 
   return {
-    promptVersion:
-      typeof value.promptVersion === 'string' ? value.promptVersion : fallbackConfig.promptVersion,
-    defaultModel:
-      typeof value.defaultModel === 'string' ? value.defaultModel : fallbackConfig.defaultModel,
-    models: models.length ? models : fallbackConfig.models,
-    systemPrompt:
-      typeof value.systemPrompt === 'string' ? value.systemPrompt : fallbackConfig.systemPrompt,
-    classificationPolicy:
-      typeof value.classificationPolicy === 'string'
-        ? value.classificationPolicy
-        : fallbackConfig.classificationPolicy,
-    userPrompt: typeof value.userPrompt === 'string' ? value.userPrompt : fallbackConfig.userPrompt
+    promptVersion,
+    defaultModel,
+    models,
+    systemPrompt
   };
 }
 
@@ -140,8 +121,7 @@ export async function loadSmartFilterConfig(): Promise<SmartFilterConfig> {
     return validateConfig(JSON.parse(raw));
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    console.warn(`[SMART FILTER] Could not read config at ${configPath}; using defaults: ${message}`);
-    return fallbackConfig;
+    throw new Error(`Could not read smart filter config at ${configPath}: ${message}`);
   }
 }
 
@@ -196,14 +176,21 @@ function buildMessages(
   source: SmartFilterSourceContext,
   config: SmartFilterConfig
 ): { role: 'system' | 'user'; content: string }[] {
+  const userContent = [
+    source.sourcePrompt ? `Watchlist source prompt:\n${source.sourcePrompt}` : '',
+    `Metadata:\n${buildMetadataBlock(video, source)}`
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
   return [
     {
       role: 'system',
-      content: `${config.systemPrompt}\n\nClassification policy:\n${config.classificationPolicy}`
+      content: config.systemPrompt
     },
     {
       role: 'user',
-      content: `${config.userPrompt}\n\nMetadata:\n${buildMetadataBlock(video, source)}`
+      content: userContent
     }
   ];
 }
@@ -245,7 +232,9 @@ function validateClassifierJson(value: unknown): {
 function getSmartFilterModel(config: SmartFilterConfig): string {
   const configuredModel = ENV.SMART_FILTER_MODEL || config.defaultModel;
   if (configuredModel) return configuredModel;
-  return config.models[0]?.id || fallbackConfig.defaultModel;
+  const firstModel = config.models[0]?.id;
+  if (firstModel) return firstModel;
+  throw new Error('Smart filter config has no model.');
 }
 
 export async function classifyVideoMetadata(

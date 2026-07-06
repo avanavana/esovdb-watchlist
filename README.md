@@ -50,7 +50,7 @@ When enabled, the runner:
 - Creates Submissions only for `Include` and `Needs Review`
 - Sets `Smart Filter Needs Review` on the Submission when the classifier result is `Needs Review`
 
-The per-source Airtable prompt field is `Smart Filter Source Prompt`; the system prompt lives in `smart-filter.config.json`.
+The per-source Airtable prompt field is `Smart Filter Source Prompt`; it is appended to the classifier user message with the video metadata. The single system prompt lives in `smart-filter.config.json`.
 
 ## Local Run
 
