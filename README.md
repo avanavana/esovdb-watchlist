@@ -69,6 +69,28 @@ The same dry run can be run locally after building:
 WATCHLIST_RECORD_ID="rec..." pnpm run smart-filter:dry-run
 ```
 
+The ESOVDB API can also queue dry runs and return JSON results for Postman-style testing:
+
+```bash
+curl -X POST "$ESOVDB_API_BASE_URL/watch/smart-filter/dry-run" \
+  -H "x-esovdb-key: $ESOVDB_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "watchlistRecordId": "rec...",
+    "smartFilterCandidateLimit": 10,
+    "smartFilterExcludeThreshold": 0.5,
+    "smartFilterAutoIncludeThreshold": 0.85,
+    "smartFilterSourcePrompt": "Prioritize lectures and field-trip videos."
+  }'
+```
+
+The response includes a `dryRunId`. Poll the result with:
+
+```bash
+curl "$ESOVDB_API_BASE_URL/watch/smart-filter/dry-run/sfdr_..." \
+  -H "x-esovdb-key: $ESOVDB_KEY"
+```
+
 ## Local Run
 
 ```bash

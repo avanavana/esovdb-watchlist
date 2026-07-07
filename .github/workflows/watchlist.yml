@@ -14,6 +14,10 @@ on:
         required: false
         type: boolean
         default: false
+      smartFilterDryRunId:
+        description: Internal dry-run result ID for API-requested dry runs
+        required: false
+        type: string
       smartFilterExcludeThreshold:
         description: Optional dry-run exclude threshold override, 0.0 to 1.0
         required: false
@@ -80,6 +84,7 @@ jobs:
           SMART_FILTER_MODEL: ${{ vars.SMART_FILTER_MODEL }}
           SMART_FILTER_CONFIG_PATH: ${{ vars.SMART_FILTER_CONFIG_PATH }}
           WATCHLIST_RECORD_ID: ${{ github.event.inputs.watchlistRecordId }}
+          SMART_FILTER_DRY_RUN_ID: ${{ github.event.inputs.smartFilterDryRunId }}
           SMART_FILTER_DRY_RUN_EXCLUDE_THRESHOLD: ${{ github.event.inputs.smartFilterExcludeThreshold }}
           SMART_FILTER_DRY_RUN_AUTO_INCLUDE_THRESHOLD: ${{ github.event.inputs.smartFilterAutoIncludeThreshold }}
           SMART_FILTER_DRY_RUN_CANDIDATE_LIMIT: ${{ github.event.inputs.smartFilterCandidateLimit }}

@@ -1,4 +1,5 @@
 import { getNextWatchlistRecord, getWatchlistRecordById } from './airtable.js';
+import { ENV } from './env.js';
 import { fetchEsovdbVideos } from './esovdb.js';
 import {
   classifyVideoMetadata,
@@ -12,13 +13,61 @@ import type { ClassifierResult, EsovdbVideo, WatchlistFields } from './types.js'
 import { countLabel, pickPublishedAfter } from './utils.js';
 
 interface DryRunResult {
-  video: EsovdbVideo;
+  video: {
+    id: string;
+    title: string;
+    url: string;
+    channel: string;
+    channelId: string;
+    date: string | null;
+    runningTime: number | string | null;
+  };
   result: ClassifierResult;
   relevanceScore: number | null;
   reason: string;
   dominantTopics: string[];
   error: string;
 }
+
+interface DryRunSummary {
+  include: number;
+  needsReview: number;
+  exclude: number;
+  error: number;
+}
+
+interface DryRunPayload {
+  ok: boolean;
+  dryRunId: string;
+  status: 'Completed';
+  completedAt: string;
+  source: {
+    recordId: string;
+    id: string;
+    type: string;
+    name: string;
+  };
+  filters: {
+    duration: string;
+    publishedAfter: string | null;
+  };
+  thresholds: SmartFilterThresholds;
+  candidateLimit: number | null;
+  apiReturnedVideos: number;
+  classifiedVideos: number;
+  summary: DryRunSummary;
+  results: DryRunResult[];
+}
+
+interface FailedDryRunPayload {
+  ok: false;
+  dryRunId: string;
+  status: 'Failed';
+  completedAt: string;
+  error: string;
+}
+
+export type SmartFilterDryRunCallbackPayload = DryRunPayload | FailedDryRunPayload;
 
 function parseOptionalThreshold(name: string): number | null {
   const raw = process.env[name]?.trim();
@@ -74,30 +123,45 @@ function formatVideoUrl(video: EsovdbVideo): string {
   return `https://youtu.be/${video.id}`;
 }
 
-function getResultCounts(results: DryRunResult[]): Record<ClassifierResult, number> {
-  return results.reduce<Record<ClassifierResult, number>>(
+function toDryRunVideo(video: EsovdbVideo): DryRunResult['video'] {
+  return {
+    id: video.id,
+    title: video.title || '',
+    url: formatVideoUrl(video),
+    channel: video.channel || '',
+    channelId: video.channelId || '',
+    date: video.date || null,
+    runningTime: video.duration ?? null
+  };
+}
+
+function getResultCounts(results: DryRunResult[]): DryRunSummary {
+  return results.reduce<DryRunSummary>(
     (counts, result) => {
-      counts[result.result] += 1;
+      if (result.result === 'Include') counts.include += 1;
+      if (result.result === 'Needs Review') counts.needsReview += 1;
+      if (result.result === 'Exclude') counts.exclude += 1;
+      if (result.result === 'Error') counts.error += 1;
       return counts;
     },
     {
-      Include: 0,
-      'Needs Review': 0,
-      Exclude: 0,
-      Error: 0
+      include: 0,
+      needsReview: 0,
+      exclude: 0,
+      error: 0
     }
   );
 }
 
-function printDryRunResults(results: DryRunResult[]): void {
-  const counts = getResultCounts(results);
+function printDryRunResults(payload: DryRunPayload): void {
+  const counts = payload.summary;
 
   console.log('');
   console.log('[SMART FILTER DRY RUN] Results');
 
-  for (const [index, result] of results.entries()) {
+  for (const [index, result] of payload.results.entries()) {
     console.log(
-      `${index + 1}. ${result.result} score=${formatScore(result.relevanceScore)} ${formatVideoUrl(result.video)}`
+      `${index + 1}. ${result.result} score=${formatScore(result.relevanceScore)} ${result.video.url}`
     );
     console.log(`   Title: ${result.video.title || '(untitled)'}`);
     if (result.reason) console.log(`   Reason: ${result.reason}`);
@@ -107,7 +171,7 @@ function printDryRunResults(results: DryRunResult[]): void {
 
   console.log('');
   console.log(
-    `[SMART FILTER DRY RUN] Summary: ${counts.Include} include, ${counts['Needs Review']} needs review, ${counts.Exclude} exclude, ${counts.Error} error.`
+    `[SMART FILTER DRY RUN] Summary: ${counts.include} include, ${counts.needsReview} needs review, ${counts.exclude} exclude, ${counts.error} error.`
   );
 }
 
@@ -128,7 +192,42 @@ async function getDryRunWatchlistRecord() {
   return record;
 }
 
-export async function dryRunSmartFilter(): Promise<void> {
+export async function postSmartFilterDryRunResult(
+  payload: SmartFilterDryRunCallbackPayload
+): Promise<void> {
+  if (!ENV.SMART_FILTER_DRY_RUN_ID) return;
+
+  const url = new URL(
+    `/watch/smart-filter/dry-run/${encodeURIComponent(ENV.SMART_FILTER_DRY_RUN_ID)}/result`,
+    ENV.ESOVDB_API_BASE_URL
+  );
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-esovdb-key': ENV.ESOVDB_KEY
+    },
+    body: JSON.stringify(payload)
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Smart filter dry-run callback failed with status ${res.status}: ${text}`);
+  }
+}
+
+export function toFailedDryRunPayload(err: unknown): FailedDryRunPayload {
+  return {
+    ok: false,
+    dryRunId: ENV.SMART_FILTER_DRY_RUN_ID,
+    status: 'Failed',
+    completedAt: new Date().toISOString(),
+    error: err instanceof Error ? err.message : String(err)
+  };
+}
+
+export async function dryRunSmartFilter(): Promise<DryRunPayload> {
   const record = await getDryRunWatchlistRecord();
   const fields = record.fields;
   const id = fields.ID;
@@ -166,12 +265,38 @@ export async function dryRunSmartFilter(): Promise<void> {
 
   console.log(`[SMART FILTER DRY RUN] API returned ${countLabel(videos.length, 'candidate video')}.`);
 
-  if (!videos.length) return;
-
   const videosToClassify = candidateLimit === null ? videos : videos.slice(0, candidateLimit);
   console.log(
     `[SMART FILTER DRY RUN] Classifying ${countLabel(videosToClassify.length, 'candidate video')}.`
   );
+
+  if (!videosToClassify.length) {
+    const payload: DryRunPayload = {
+      ok: true,
+      dryRunId: ENV.SMART_FILTER_DRY_RUN_ID,
+      status: 'Completed',
+      completedAt: new Date().toISOString(),
+      source: {
+        recordId: record.id,
+        id,
+        type,
+        name: fields.Name || ''
+      },
+      filters: {
+        duration,
+        publishedAfter
+      },
+      thresholds,
+      candidateLimit,
+      apiReturnedVideos: videos.length,
+      classifiedVideos: 0,
+      summary: getResultCounts([]),
+      results: []
+    };
+
+    printDryRunResults(payload);
+    return payload;
+  }
 
   const config = await loadSmartFilterConfig();
   const results: DryRunResult[] = [];
@@ -193,7 +318,7 @@ export async function dryRunSmartFilter(): Promise<void> {
       );
 
       results.push({
-        video,
+        video: toDryRunVideo(video),
         result: classification.classifierResult,
         relevanceScore: classification.relevanceScore,
         reason: classification.reason,
@@ -204,7 +329,7 @@ export async function dryRunSmartFilter(): Promise<void> {
       const message = err instanceof Error ? err.message : String(err);
 
       results.push({
-        video,
+        video: toDryRunVideo(video),
         result: 'Error',
         relevanceScore: null,
         reason: '',
@@ -214,5 +339,29 @@ export async function dryRunSmartFilter(): Promise<void> {
     }
   }
 
-  printDryRunResults(results);
+  const payload: DryRunPayload = {
+    ok: true,
+    dryRunId: ENV.SMART_FILTER_DRY_RUN_ID,
+    status: 'Completed',
+    completedAt: new Date().toISOString(),
+    source: {
+      recordId: record.id,
+      id,
+      type,
+      name: fields.Name || ''
+    },
+    filters: {
+      duration,
+      publishedAfter
+    },
+    thresholds,
+    candidateLimit,
+    apiReturnedVideos: videos.length,
+    classifiedVideos: videosToClassify.length,
+    summary: getResultCounts(results),
+    results
+  };
+
+  printDryRunResults(payload);
+  return payload;
 }

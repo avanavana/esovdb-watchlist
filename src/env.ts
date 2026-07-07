@@ -20,4 +20,5 @@ export const ENV = {
   SMART_FILTER_CONFIG_PATH: process.env.SMART_FILTER_CONFIG_PATH || "smart-filter.config.json",
   SMART_FILTER_MODEL: process.env.SMART_FILTER_MODEL || "",
   SMART_FILTER_OPENAI_BASE_URL: process.env.SMART_FILTER_OPENAI_BASE_URL || "https://api.openai.com/v1",
+  SMART_FILTER_DRY_RUN_ID: process.env.SMART_FILTER_DRY_RUN_ID || "",
 };
