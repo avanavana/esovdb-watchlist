@@ -68,6 +68,17 @@ function getResponseHeaderSummary(res: Response): string {
   return values.join(', ');
 }
 
+function isMissingTriggerSourceFieldError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return message.includes('UNKNOWN_FIELD_NAME') && message.includes('Trigger Source');
+}
+
+function withoutTriggerSourceField(fields: WatchlistRunFields): WatchlistRunFields {
+  const fallbackFields = { ...fields };
+  delete fallbackFields['Trigger Source'];
+  return fallbackFields;
+}
+
 function airtableUrl(baseId: string, path: string): string {
   const u = new URL(`https://api.airtable.com/v0/${baseId}${path}`);
   return u.toString();
@@ -214,10 +225,24 @@ export async function createWatchlistRun(
 ): Promise<AirtableRecord<WatchlistRunFields>> {
   const table = encodeURIComponent(ENV.AIRTABLE_WATCHLIST_RUNS_TABLE);
 
-  return airtableFetch<AirtableRecord<WatchlistRunFields>>(ENV.AIRTABLE_ADMIN_BASE_ID, `/${table}`, {
-    method: 'POST',
-    body: JSON.stringify({ fields }),
-  });
+  try {
+    return await airtableFetch<AirtableRecord<WatchlistRunFields>>(
+      ENV.AIRTABLE_ADMIN_BASE_ID,
+      `/${table}`,
+      {
+        method: 'POST',
+        body: JSON.stringify({ fields }),
+      }
+    );
+  } catch (err) {
+    if (!fields['Trigger Source'] || !isMissingTriggerSourceFieldError(err)) throw err;
+
+    console.warn('[WATCHLIST] Watchlist Runs field "Trigger Source" is missing; creating run without trigger source metadata.');
+    return airtableFetch<AirtableRecord<WatchlistRunFields>>(ENV.AIRTABLE_ADMIN_BASE_ID, `/${table}`, {
+      method: 'POST',
+      body: JSON.stringify({ fields: withoutTriggerSourceField(fields) }),
+    });
+  }
 }
 
 export async function updateWatchlistRun(

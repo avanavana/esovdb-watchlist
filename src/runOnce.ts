@@ -22,6 +22,7 @@ import type {
   SubmissionFields,
   WatchlistRunFields,
   WatchlistRunStatus,
+  WatchlistRunTriggerSource,
 } from "./types.js";
 import { countLabel, isoNow, pickPublishedAfter, toSubmissionRecord } from "./utils.js";
 
@@ -32,6 +33,14 @@ function getGitHubWorkflowRunUrl(): string {
 
   if (!serverUrl || !repository || !runId) return "";
   return `${serverUrl}/${repository}/actions/runs/${runId}`;
+}
+
+function getWatchlistRunTriggerSource(): WatchlistRunTriggerSource {
+  const explicitTriggerSource = process.env.WATCHLIST_RUN_TRIGGER_SOURCE?.trim();
+
+  if (explicitTriggerSource === "API") return "API";
+  if (process.env.GITHUB_EVENT_NAME?.trim() === "schedule") return "Scheduled";
+  return "Manual GitHub";
 }
 
 async function updateRunAndWatchlistStatus(args: {
@@ -98,6 +107,7 @@ export async function runOnce(): Promise<void> {
       "Watchlist Source Name": fields.Name || "",
       "Started At": startedAt,
       Status: "Running",
+      "Trigger Source": getWatchlistRunTriggerSource(),
     };
     const workflowRunUrl = getGitHubWorkflowRunUrl();
     const gitCommitSha = process.env.GITHUB_SHA?.trim() || "";

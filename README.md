@@ -45,6 +45,7 @@ Smart filtering is opt-in per Watchlist source. When `Smart Filtering` is false 
 When enabled, the runner:
 
 - Creates a `Watchlist Runs` record in the Admin base
+- Sets `Trigger Source` on the run to `Scheduled`, `Manual GitHub`, or `API`
 - Classifies each candidate video with the metadata-only prompt in `smart-filter.config.json`
 - Creates `Watchlist Submission Candidates` records for every classified candidate
 - Creates Submissions only for `Include` and `Needs Review`

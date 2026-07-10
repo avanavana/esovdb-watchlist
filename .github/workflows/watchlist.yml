@@ -9,6 +9,10 @@ on:
         description: Airtable Watchlist record ID to process (optional)
         required: false
         type: string
+      watchlistRunTriggerSource:
+        description: Internal trigger source for API-requested real runs
+        required: false
+        type: string
       smartFilterDryRun:
         description: Run smart filtering only and print results without writing Airtable records
         required: false
@@ -66,6 +70,7 @@ jobs:
           SMART_FILTER_MODEL: ${{ vars.SMART_FILTER_MODEL }}
           SMART_FILTER_CONFIG_PATH: ${{ vars.SMART_FILTER_CONFIG_PATH }}
           WATCHLIST_RECORD_ID: ${{ github.event.inputs.watchlistRecordId }}
+          WATCHLIST_RUN_TRIGGER_SOURCE: ${{ github.event.inputs.watchlistRunTriggerSource }}
           WATCHLIST_DISCORD_NOTIFY_PATH: ${{ vars.WATCHLIST_DISCORD_NOTIFY_PATH }}
       - name: Dry run smart filter
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.smartFilterDryRun }}

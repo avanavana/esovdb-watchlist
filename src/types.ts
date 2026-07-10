@@ -3,6 +3,7 @@ export type WatchlistType = "Channel" | "Playlist";
 export type DurationFilter = "any" | "short" | "medium" | "long";
 export type SmartFilterMode = "Metadata" | "Metadata + Transcript";
 export type ClassifierResult = "Include" | "Needs Review" | "Exclude" | "Error";
+export type WatchlistRunTriggerSource = "Scheduled" | "Manual GitHub" | "API";
 export type WatchlistRunStatus =
   | "Running"
   | "Completed"
@@ -83,6 +84,7 @@ export interface WatchlistRunFields {
   "Started At": string;
   "Completed At"?: string;
   Status: WatchlistRunStatus;
+  "Trigger Source"?: WatchlistRunTriggerSource;
   Error?: string;
   "GitHub Workflow Run URL"?: string;
   "Git Commit SHA"?: string;
