@@ -94,24 +94,26 @@ curl "$ESOVDB_API_BASE_URL/watch/smart-filter/dry-run/sfdr_..." \
 
 ## Overturning an Excluded Candidate
 
-The Admin base can include an excluded `Watchlist Submission Candidates` record with one click. The Script Extension at `airtable-scripts/include-excluded-candidate.js` sends the clicked candidate ID to the ESOVDB API, which:
+The Admin base can include an excluded `Watchlist Submission Candidates` record with one click without storing an API key in a Scripting Extension. The button's Script Extension at `airtable-scripts/include-excluded-candidate.js` validates the candidate and checks its `Override Requested` field. An Airtable Automation watches that field and runs `airtable-scripts/process-excluded-candidate-override.js`, which reads the API key from Airtable's secret store and makes one ESOVDB API request to create the cross-base submission.
 
 - verifies that the candidate is excluded and has no linked submission
 - retrieves fresh YouTube metadata
 - creates a main-base `Submissions` record with the original run, candidate, relevance, and watchlist-source links
-- changes `Classifier Result` to `Include`
-- replaces `Classifier Reason` with an audit message that preserves the original exclusion reason
-- stores the created `Submission Record ID` on the candidate
+
+After the API returns the submission record ID, the Automation changes `Classifier Result` to `Include`, replaces `Classifier Reason` with an audit message that preserves the original exclusion reason, stores the created `Submission Record ID`, and clears `Override Requested`. If the request fails, the Automation clears the flag and reports a failed run so the button can be tried again. A retry after the API created a submission but before Airtable was updated recovers the existing submission by `Candidate ID`.
 
 Set up the button as follows:
 
-1. Configure `AIRTABLE_ADMIN_API_KEY`, `AIRTABLE_ADMIN_BASE_ID`, `AIRTABLE_WATCHLIST_CANDIDATES_TABLE`, and a purpose-specific `WATCHLIST_OVERRIDE_KEY` on the ESOVDB API deployment. The Admin API key needs read/write access only to the Admin base; if omitted, the API falls back to `AIRTABLE_API_KEY`.
-2. Add a Scripting Extension to the Admin base and paste in `airtable-scripts/include-excluded-candidate.js`.
-3. Replace `REPLACE_WITH_WATCHLIST_OVERRIDE_KEY` with the same purpose-specific key.
-4. Add an `Include` button field to `Watchlist Submission Candidates`, choose **Run script**, and select the extension.
-5. Use a view filtered to `Classifier Result = Exclude` and an empty `Submission Record ID`, because Airtable button fields do not support per-row conditional visibility.
+1. Add an `Override Requested` checkbox field to `Watchlist Submission Candidates`.
+2. Configure a purpose-specific `WATCHLIST_OVERRIDE_KEY` on the ESOVDB API deployment.
+3. Add an Airtable Automation secret named `ESOVDB_API_KEY` containing the same value as `WATCHLIST_OVERRIDE_KEY`.
+4. Create an Automation triggered when `Override Requested` is checked, `Classifier Result` is `Exclude`, and `Submission Record ID` is empty.
+5. Add a **Run a script** Automation action using `airtable-scripts/process-excluded-candidate-override.js`. Add a `candidateRecordId` input variable mapped to the triggering record's Airtable record ID.
+6. Add a Scripting Extension to the Admin base using `airtable-scripts/include-excluded-candidate.js`.
+7. Add an `Include` button field, choose **Run script**, and select the Scripting Extension.
+8. Use a view filtered to `Classifier Result = Exclude` and an empty `Submission Record ID`, because Airtable button fields do not support per-row conditional visibility.
 
-The endpoint is idempotent for completed overrides and recovers a submission created by an interrupted earlier request by looking it up through `Candidate ID` before creating another record.
+The Scripting Extension uses the active table and its first `input.recordAsync` call, so it works from either the connected button or the standalone extension. It rejects other tables, non-excluded candidates, and candidates that already contain a submission record ID. The secret syntax belongs only in the Automation script: `input.secret.ESOVDB_API_KEY`.
 
 ## Local Run
 
