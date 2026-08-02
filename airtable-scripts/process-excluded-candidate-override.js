@@ -1,7 +1,7 @@
 const apiBaseUrl = 'https://api.esovdb.org';
 const candidatesTable = base.getTable('Watchlist Submission Candidates');
 const { candidateRecordId } = input.config();
-const apiKey = input.secret.ESOVDB_API_KEY;
+const apiKey = input.secret('ESOVDB_API_KEY');
 let candidate;
 
 try {

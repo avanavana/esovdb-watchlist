@@ -113,7 +113,7 @@ Set up the button as follows:
 7. Add an `Include` button field, choose **Run script**, and select the Scripting Extension.
 8. Use a view filtered to `Classifier Result = Exclude` and an empty `Submission Record ID`, because Airtable button fields do not support per-row conditional visibility.
 
-The Scripting Extension uses the active table and its first `input.recordAsync` call, so it works from either the connected button or the standalone extension. It rejects other tables, non-excluded candidates, and candidates that already contain a submission record ID. The secret syntax belongs only in the Automation script: `input.secret.ESOVDB_API_KEY`.
+The Scripting Extension uses the active table and its first `input.recordAsync` call, so it works from either the connected button or the standalone extension. It rejects other tables, non-excluded candidates, and candidates that already contain a submission record ID. The secret syntax belongs only in the Automation script: `input.secret('ESOVDB_API_KEY')`.
 
 ## Local Run
 
