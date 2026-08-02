@@ -92,6 +92,27 @@ curl "$ESOVDB_API_BASE_URL/watch/smart-filter/dry-run/sfdr_..." \
   -H "x-esovdb-key: $ESOVDB_KEY"
 ```
 
+## Overturning an Excluded Candidate
+
+The Admin base can include an excluded `Watchlist Submission Candidates` record with one click. The Script Extension at `airtable-scripts/include-excluded-candidate.js` sends the clicked candidate ID to the ESOVDB API, which:
+
+- verifies that the candidate is excluded and has no linked submission
+- retrieves fresh YouTube metadata
+- creates a main-base `Submissions` record with the original run, candidate, relevance, and watchlist-source links
+- changes `Classifier Result` to `Include`
+- replaces `Classifier Reason` with an audit message that preserves the original exclusion reason
+- stores the created `Submission Record ID` on the candidate
+
+Set up the button as follows:
+
+1. Configure `AIRTABLE_ADMIN_API_KEY`, `AIRTABLE_ADMIN_BASE_ID`, `AIRTABLE_WATCHLIST_CANDIDATES_TABLE`, and a purpose-specific `WATCHLIST_OVERRIDE_KEY` on the ESOVDB API deployment. The Admin API key needs read/write access only to the Admin base; if omitted, the API falls back to `AIRTABLE_API_KEY`.
+2. Add a Scripting Extension to the Admin base and paste in `airtable-scripts/include-excluded-candidate.js`.
+3. Replace `REPLACE_WITH_WATCHLIST_OVERRIDE_KEY` with the same purpose-specific key.
+4. Add an `Include` button field to `Watchlist Submission Candidates`, choose **Run script**, and select the extension.
+5. Use a view filtered to `Classifier Result = Exclude` and an empty `Submission Record ID`, because Airtable button fields do not support per-row conditional visibility.
+
+The endpoint is idempotent for completed overrides and recovers a submission created by an interrupted earlier request by looking it up through `Candidate ID` before creating another record.
+
 ## Local Run
 
 ```bash
