@@ -1,7 +1,10 @@
-const apiBaseUrl = 'https://api.esovdb.org';
+/**
+ *  @context Watchlist Submission Candidates › onUpdateRecord › {Flag for Inclusion}
+ *  @desc When a candidate's flag for inclusion status changes to "true", update the record and send a request to the ESOVDB API to create a new submission record for the candidate. 
+*/
+
 const candidatesTable = base.getTable('Watchlist Submission Candidates');
 const { candidateRecordId } = input.config();
-const apiKey = input.secret('ESOVDB_API_KEY');
 let candidate;
 
 try {
@@ -25,14 +28,16 @@ try {
   const classifierReason = originalClassifierReason
     ? `Overturned classifier decision. (Original exclusion reason: ${originalClassifierReason})`
     : 'Overturned classifier decision.';
+
   const relevanceScore = candidate.getCellValue('Relevance Score');
+
   const response = await fetch(
-    `${apiBaseUrl}/watch/smart-filter/candidates/${encodeURIComponent(candidate.id)}/include`,
+    `https://api.esovdb.org/watch/smart-filter/candidates/${encodeURIComponent(candidate.id)}/include`,
     {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'x-esovdb-watchlist-override-key': apiKey
+        'x-esovdb-key': input.secret('ESOVDB_API_KEY')
       },
       body: JSON.stringify({
         videoId: candidate.getCellValueAsString('Video ID'),
@@ -43,6 +48,7 @@ try {
       })
     }
   );
+
   const responseText = await response.text();
   let responseBody = {};
 
@@ -64,13 +70,13 @@ try {
     'Classifier Result': { name: 'Include' },
     'Classifier Reason': classifierReason,
     'Submission Record ID': responseBody.submissionRecordId,
-    'Override Requested': false
+    'Flag for Inclusion': false
   });
 
   output.set('submissionRecordId', responseBody.submissionRecordId);
 } catch (error) {
-  if (candidate && candidate.getCellValue('Override Requested')) {
-    await candidatesTable.updateRecordAsync(candidate.id, { 'Override Requested': false });
+  if (candidate && candidate.getCellValue('Flag for Inclusion')) {
+    await candidatesTable.updateRecordAsync(candidate.id, { 'Flag for Inclusion': false });
   }
 
   throw error;
