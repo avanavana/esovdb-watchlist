@@ -14,7 +14,7 @@ try {
     throw new Error('This automation can only process excluded candidates.');
   }
 
-  if (!candidate.getCellValue('Override Requested')) {
+  if (!candidate.getCellValue('Flag for Inclusion')) {
     throw new Error('This candidate does not have a pending override request.');
   }
 
