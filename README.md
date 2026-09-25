@@ -2,6 +2,16 @@
 
 Standalone TypeScript runner for ESOVDB YouTube watchlist ingestion via GitHub Actions.
 
+## Automated Maintenance
+
+**Last successful automated update:** 2026-09-25
+
+The initial date is the installation baseline. After a successful scheduled watchlist run, the workflow refreshes this UTC date and commits only this README when at least 30 days have elapsed. Manual runs and smart-filter dry runs do not update it. The existing checkout authenticates the push with `GITHUB_TOKEN`; the job grants `contents: write` and uses the `github-actions[bot]` identity.
+
+This is an experiment to determine whether workflow-authored commits count as repository activity for GitHub's 60-day scheduled-workflow inactivity policy, not a guarantee. Default-branch rules must permit the push. Concurrent branch changes can reject it safely; a later successful scheduled run retries from the latest branch state.
+
+Run the maintenance regression tests on Linux with Git, Bash, Python 3, and GNU coreutils: `python3 -m unittest discover -s .github/tests -v`. They use disposable local repositories and do not contact GitHub or the ingestion services.
+
 ## What It Does
 
 - Selects the oldest `Active` watchlist row in Airtable (`Last Checked` ascending, blanks first)
