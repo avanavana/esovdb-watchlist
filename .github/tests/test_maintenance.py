@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[2]
 WORKFLOW = (ROOT / '.github/workflows/watchlist.yml').read_text()
 MAINTENANCE_STEP = WORKFLOW.split('      - name: Update automated maintenance date\n')[1]
 SCRIPT = textwrap.dedent(MAINTENANCE_STEP.split('        run: |\n')[1])
-MARKER = '**Last successful automated update:** '
+MARKER = 'Last Updated: '
 
 
 class MaintenanceTests(unittest.TestCase):
